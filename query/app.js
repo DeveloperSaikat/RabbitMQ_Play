@@ -36,6 +36,23 @@ connectToRabbitMQ().then(() => {
 
         channel.ack(data);
     });
+
+    channel.consume('review-creation-queue', async data => {
+        let { newreview } = JSON.parse(data.content);
+        console.log('Received', newreview);
+        let foundCourse = await queryCourses.findOne({ id: newreview.courseId });
+
+        if( foundCourse ) {
+            await foundCourse.updateOne({
+                id: newreview.courseId
+            },
+            {
+                $push: { reviews: { id: newreview.id, content: newreview.content}}
+            });
+        }
+
+        channel.ack(data);
+    })
 });
 
 app.listen(8080, () => {
